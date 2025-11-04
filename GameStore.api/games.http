@@ -1,0 +1,30 @@
+﻿### get all the games
+GET http://localhost:5264/games
+
+### get specific game
+GET http://localhost:5264/games/2
+
+### create a game
+POST http://localhost:5264/games/create
+Content-Type: application/json
+
+{
+  "name": "mafia II",
+  "genre": "action",
+  "price": "24.99",
+  "releaseDate": "2010-08-24"
+}
+
+### update a game
+PUT http://localhost:5264/games/update/2
+Content-Type: application/json
+
+{
+  "name": "FIFA 26",
+  "genre": "Sports",
+  "price": 89.99,
+  "releaseDate": "2025-09-29"
+}
+
+### delete a game
+DELETE http://localhost:5264/games/delete/4
