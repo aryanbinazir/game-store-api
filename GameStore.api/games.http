@@ -5,7 +5,7 @@ GET http://localhost:5264/games
 GET http://localhost:5264/games/2
 
 ### create a game
-POST http://localhost:5264/games/create
+POST http://localhost:5264/games
 Content-Type: application/json
 
 {
@@ -16,7 +16,7 @@ Content-Type: application/json
 }
 
 ### update a game
-PUT http://localhost:5264/games/update/2
+PUT http://localhost:5264/games/2
 Content-Type: application/json
 
 {
@@ -27,4 +27,4 @@ Content-Type: application/json
 }
 
 ### delete a game
-DELETE http://localhost:5264/games/delete/4
+DELETE http://localhost:5264/games/4
