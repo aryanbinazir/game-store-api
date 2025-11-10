@@ -21,5 +21,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapGamesEndpoints();
+app.MapGenresEndpoints();
 
 app.Run();
