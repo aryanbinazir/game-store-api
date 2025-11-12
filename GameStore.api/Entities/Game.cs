@@ -12,6 +12,6 @@ public class Game
     public DateOnly? ReleaseDate { get; set; }
     
     // Relations
-    public int GenreId { get; set; } 
+    public int? GenreId { get; set; } 
     public Genre? Genre { get; set; }
 }

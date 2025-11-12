@@ -1,85 +1,114 @@
-﻿using GameStore.api.Dtos;
+﻿using GameStore.api.Data;
+using GameStore.api.Dtos;
+using GameStore.api.Entities;
+using Microsoft.EntityFrameworkCore;
+
 
 namespace GameStore.api.Endpoints;
 
 public static class GamesEndpoints
 {
-    private const string GetGameByIdRouteName = "GetGameById";
-
-    private static readonly List<GameDto> Games =
-    [
-        new GameDto(
-            1,
-            "Elden Ring",
-            "RPG",
-            59.99m,
-            new DateOnly(2022, 2, 25)),
-        new GameDto(
-            2,
-            "FIFA 24",
-            "Sports",
-            69.99m,
-            new DateOnly(2023, 9, 29)),
-        new GameDto(
-            3,
-            "Call of Duty: Modern Warfare III",
-            "Shooter",
-            79.99m,
-            new DateOnly(2023, 11, 10))
-    ];
-
     public static RouteGroupBuilder MapGamesEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("games")
                        .WithParameterValidation();
         
         // list all the game
-        group.MapGet("/", () => Games);
+        group.MapGet("/", (AppDbContext dbContext) =>
+        {
+            var games = dbContext.Games
+                .Include(game => game.Genre)
+                .Select(game => new GameDto(
+                    game.Id,
+                    game.Name,
+                    game.Genre!.Name,
+                    game.Price,
+                    game.ReleaseDate
+                ));
+            return Results.Ok(games);
+        });
 
         // get a specific game
-        group.MapGet("/{id}", (int id) =>
+        group.MapGet("/{id}", (int id, AppDbContext dbContext) =>
         {
-            GameDto? game = Games.Find(g => g.Id == id);
-            return game is null ? Results.NotFound() : Results.Ok(game);
-        }).WithName(GetGameByIdRouteName);
+            var game = dbContext.Games
+                .Include(game => game.Genre)
+                .FirstOrDefault(game => game.Id == id);
+
+            return game == null ? Results.NotFound() : Results.Ok(game);
+        });
 
         // create a game
-        group.MapPost("/", (CreateGameDto dto) =>
+        group.MapPost("/", (CreateGameDto dto, AppDbContext dbContext) =>
         {
+            // Check about duplicate name and invalid IdGenre
+            if (dbContext.Games.Any(game => game.Name == dto.Name))
+                return Results.Conflict(new { message = "An item with that name already exists." });
+            
+            var genre = dbContext.Genres.FirstOrDefault(genre => genre.Id == dto.IdGenre);
+            if (genre == null) 
+                return Results.Conflict(new { message = "IdGenre is not valid" });
     
-            var game = new GameDto(
-                Games[^1].Id + 1,
-                dto.Name,
-                dto.Genre,
-                dto.Price,
-                dto.ReleaseDate
-            );
-            Games.Add(game);
-    
-            return Results.CreatedAtRoute(GetGameByIdRouteName, new {id = game.Id}, game);
+            Game game = new()
+            {
+                Name = dto.Name,
+                GenreId = dto.IdGenre,
+                Genre = dbContext.Genres.FirstOrDefault(genre2 => genre2.Id == dto.IdGenre),
+                Price = dto.Price,
+                ReleaseDate = dto.ReleaseDate
+            };
+            dbContext.Games.Add(game);
+            dbContext.SaveChanges();
+
+            var result = new GameDto(game.Id, game.Name, game.Genre?.Name, game.Price, game.ReleaseDate);
+            return Results.Ok(result);
         });
 
         // update a game
-        group.MapPut("/{id}", (int id, UpdateGameDto dto) =>
+        group.MapPut("/{id}", (int id, UpdateGameDto dto, AppDbContext dbContext) =>
         {
-            var index = Games.IndexOf(Games.Find(g => g.Id == id)!);
-            if (index == -1)
+            var game =  dbContext.Games
+                .Include(game => game.Genre)
+                .FirstOrDefault(game => game.Id == id);
+            if (game == null)
             {
                 return Results.NotFound();
             }
     
-            Games[index] = new GameDto(id, dto.Name, dto.Genre, dto.Price, dto.ReleaseDate);
-            return Results.CreatedAtRoute(GetGameByIdRouteName, new {id = Games[index].Id}, Games[index]);
-    
+            if (dto.Name != null)
+            {
+                // Check input name is duplicate or not
+                if (dbContext.Games.Any(game2 => game2.Name == dto.Name))
+                    return Results.Conflict(new { message = "An item with that name already exists." });
+                game.Name = dto.Name;
+            }
+            if (dto.Price != null) game.Price = (decimal)dto.Price;
+            if (dto.IdGenre != null)
+            {
+                // Check is that Genre with the Id has given is valid or not
+                var genre = dbContext.Genres.FirstOrDefault(genre => genre.Id == dto.IdGenre);
+                if (genre == null) 
+                    return Results.Conflict(new { message = "IdGenre is not valid" });
+                game.GenreId = dto.IdGenre;
+                game.Genre = genre;
+            }
+            if (dto.ReleaseDate != null) game.ReleaseDate = dto.ReleaseDate;
+            
+            dbContext.Games.Update(game);
+            dbContext.SaveChanges();
+            
+            var result = new GameDto(game.Id, game.Name, game.Genre?.Name, game.Price, game.ReleaseDate);
+            return Results.Ok(result);
         });
 
         // delete a game
-        group.MapDelete("/{id}", (int id) =>
+        group.MapDelete("/{id}", (int id,  AppDbContext dbContext) =>
         {
-            var game = Games.Find(g => g.Id == id);
+            var game = dbContext.Games.FirstOrDefault(genre => genre.Id == id);
             if (game is null) return Results.NotFound();
-            Games.Remove(game);
-            return Results.NoContent();
+            dbContext.Games.Remove(game);
+            dbContext.SaveChanges();
+            return Results.Accepted();
         });
         return group;
     }

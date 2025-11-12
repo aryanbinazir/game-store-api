@@ -3,8 +3,11 @@
 namespace GameStore.api.Dtos;
 
 public record CreateGameDto(
-    [Required][MaxLength(50)] string Name,
-    int IdGenre,
-    [Range(typeof(decimal), "1", "100")] decimal Price,
-    DateOnly ReleaseDate
+    [Required][MaxLength(50)]
+    string Name,
+    int? IdGenre,
+    [Range(typeof(decimal), "1", "100")]
+    decimal Price,
+    [Range(typeof(DateOnly), "1958-01-01", "2040-12-30")]
+    DateOnly? ReleaseDate
     );
