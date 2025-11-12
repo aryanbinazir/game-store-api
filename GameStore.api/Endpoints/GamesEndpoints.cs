@@ -8,10 +8,13 @@ namespace GameStore.api.Endpoints;
 
 public static class GamesEndpoints
 {
+    private const string GetGamesByIdRouteName = "GetGamesById";
+
     public static RouteGroupBuilder MapGamesEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("games")
-                       .WithParameterValidation();
+            .WithParameterValidation()
+            .WithGroupName("Games");
         
         // list all the game
         group.MapGet("/", (AppDbContext dbContext) =>
@@ -36,7 +39,7 @@ public static class GamesEndpoints
                 .FirstOrDefault(game => game.Id == id);
 
             return game == null ? Results.NotFound() : Results.Ok(game);
-        });
+        }).WithName(GetGamesByIdRouteName);
 
         // create a game
         group.MapPost("/", (CreateGameDto dto, AppDbContext dbContext) =>
@@ -61,7 +64,7 @@ public static class GamesEndpoints
             dbContext.SaveChanges();
 
             var result = new GameDto(game.Id, game.Name, game.Genre?.Name, game.Price, game.ReleaseDate);
-            return Results.Ok(result);
+            return Results.CreatedAtRoute(GetGamesByIdRouteName, new {id = game.Id}, result);
         });
 
         // update a game
@@ -85,7 +88,7 @@ public static class GamesEndpoints
             if (dto.Price != null) game.Price = (decimal)dto.Price;
             if (dto.IdGenre != null)
             {
-                // Check is that Genre with the Id has given is valid or not
+                // Check is that Genre with the id has given is valid or not
                 var genre = dbContext.Genres.FirstOrDefault(genre => genre.Id == dto.IdGenre);
                 if (genre == null) 
                     return Results.Conflict(new { message = "IdGenre is not valid" });
@@ -98,7 +101,7 @@ public static class GamesEndpoints
             dbContext.SaveChanges();
             
             var result = new GameDto(game.Id, game.Name, game.Genre?.Name, game.Price, game.ReleaseDate);
-            return Results.Ok(result);
+            return Results.CreatedAtRoute(GetGamesByIdRouteName, new {id = game.Id}, result);
         });
 
         // delete a game
@@ -110,6 +113,19 @@ public static class GamesEndpoints
             dbContext.SaveChanges();
             return Results.Accepted();
         });
+
+        group.MapDelete("/", (AppDbContext dbContext) =>
+        {
+            var games = dbContext.Games.ToList();
+            foreach (var game in games)
+            {
+                dbContext.Games.Remove(game);
+            }
+            dbContext.SaveChanges();
+            return Results.Accepted();
+        });
         return group;
+        
+        
     }
 }

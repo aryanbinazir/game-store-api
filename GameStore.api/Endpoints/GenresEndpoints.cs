@@ -7,11 +7,12 @@ namespace GameStore.api.Endpoints;
 
 public static class GenresEndpoints
 {
-    
+    private const string GetGenresByIdRouteName = "GetGenresById";
     public static RouteGroupBuilder MapGenresEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("genres")
-                       .WithParameterValidation();
+            .WithParameterValidation()
+            .WithGroupName("Genres");
         
         // list all the genres
         group.MapGet("/", (AppDbContext dbContext) =>
@@ -40,7 +41,7 @@ public static class GenresEndpoints
                 genre.Games!.Select(game=> game.Name).ToList());
 
             return Results.Ok(result);
-        });
+        }).WithName(GetGenresByIdRouteName);
 
         // create a genre
         group.MapPost("/", (CreateGenreDto dto, AppDbContext dbContext) =>
@@ -70,7 +71,7 @@ public static class GenresEndpoints
             dbContext.SaveChanges();
 
             var result = new GenreDto(genre.Id, genre.Name, genre.Games.Select(game => game.Name).ToList());
-            return Results.Ok(result);
+            return Results.CreatedAtRoute(GetGenresByIdRouteName, new {id = genre.Id}, result);
         });
 
         // update a genre
@@ -107,7 +108,7 @@ public static class GenresEndpoints
             dbContext.SaveChanges();
             
             var result = new GenreDto(genre.Id, genre.Name, genre.Games?.Select(game => game.Name).ToList());
-            return Results.Ok(result);
+            return Results.CreatedAtRoute(GetGenresByIdRouteName, new {id = genre.Id}, result);
         });
 
         // delete a genre
@@ -118,6 +119,17 @@ public static class GenresEndpoints
             dbContext.Genres.Remove(genre);
             dbContext.SaveChanges();
             return Results.Ok();
+        });
+        
+        group.MapDelete("/", (AppDbContext dbContext) =>
+        {
+            var genres = dbContext.Genres.ToList();
+            foreach (var genre in genres)
+            {
+                dbContext.Genres.Remove(genre);
+            }
+            dbContext.SaveChanges();
+            return Results.Accepted();
         });
         return group;
     }
