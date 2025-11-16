@@ -3,7 +3,7 @@
 public record GameDto(
     int Id,
     string Name,
-    string? GenreName,
+    int? GenreId,
     decimal Price,
     DateOnly? ReleaseDate
     );
