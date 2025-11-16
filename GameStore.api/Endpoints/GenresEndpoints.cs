@@ -1,6 +1,7 @@
 ﻿using GameStore.api.Data;
 using GameStore.api.Dtos.Genre;
 using GameStore.api.Entities;
+using GameStore.api.Mapping;
 using Microsoft.EntityFrameworkCore;
 
 namespace GameStore.api.Endpoints;
@@ -19,11 +20,8 @@ public static class GenresEndpoints
         {
             var genres = await dbContext.Genres
                 .Include(genre => genre.Games)
-                .Select(genre => new GenreDto(
-                    genre.Id,
-                    genre.Name,
-                    genre.Games!.Select(game => game.Id).ToList()
-                )).ToListAsync();
+                .Select(genre => genre.ToDto()
+                ).ToListAsync();
             return Results.Ok(genres);
         });
 
@@ -33,14 +31,7 @@ public static class GenresEndpoints
             var genre = await dbContext.Genres
                 .Include(genre => genre.Games)
                 .FirstOrDefaultAsync(genre => genre.Id == id);
-            if (genre == null) return Results.NotFound();
-
-            var result = new GenreDto(
-                genre.Id,
-                genre.Name,
-                genre.Games?.Select(game=> game.Id).ToList());
-
-            return Results.Ok(result);
+            return genre == null ? Results.NotFound() : Results.Ok(genre.ToDto());
         }).WithName(GetGenresByIdRouteName);
 
         // create a genre
@@ -69,8 +60,7 @@ public static class GenresEndpoints
             dbContext.Genres.Add(genre);
             await dbContext.SaveChangesAsync();
 
-            var result = new GenreDto(genre.Id, genre.Name, genre.Games.Select(game => game.Id).ToList());
-            return Results.CreatedAtRoute(GetGenresByIdRouteName, new {id = genre.Id}, result);
+            return Results.CreatedAtRoute(GetGenresByIdRouteName, new {id = genre.Id}, genre.ToDto());
         });
 
         // update a genre
@@ -106,8 +96,7 @@ public static class GenresEndpoints
             dbContext.Genres.Update(genre);
             await dbContext.SaveChangesAsync();
             
-            var result = new GenreDto(genre.Id, genre.Name, genre.Games?.Select(game => game.Id).ToList());
-            return Results.CreatedAtRoute(GetGenresByIdRouteName, new {id = genre.Id}, result);
+            return Results.CreatedAtRoute(GetGenresByIdRouteName, new {id = genre.Id}, genre.ToDto());
         });
 
         // delete a genre
